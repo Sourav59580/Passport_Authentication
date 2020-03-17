@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
+const bcrypt = require('bcryptjs');
+const passport = require("passport");
 
+//User model
+const User = require("../models/User");
 
 //@type GET
 //$route /
@@ -62,10 +66,70 @@ router.post("/register", (req, res) => {
             password2
         });
     } else {
-        res.send("success");
+        User.findOne({
+                email: email
+            })
+            .then((user) => {
+                if (user) {
+                    //user exists
+                    errors.push({
+                        msg: "User already exits"
+                    });
+
+                    res.render('register', {
+                        errors,
+                        name,
+                        email,
+                        password,
+                        password2
+                    });
+                } else {
+                    const newUser = new User({
+                        name,
+                        email,
+                        password
+                    })
+                    bcrypt.genSalt(10, (err, salt) =>
+                        bcrypt.hash(newUser.password,salt, (err, hash) => {
+                          if(err) throw err;
+                          newUser.password = hash;
+                          newUser.save()
+                          .then(user =>{
+                              req.flash("success_msg" , "You are now registered you can login");
+                              res.redirect('/login');
+                          })
+                          .catch(err =>console.log(err));
+                        })
+                    )
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+            })
     }
 })
 
+//@type POST
+//$route /login
+//@desc route for post login
+//@access PRIVATE
+router.post('/login', (req, res, next) => {
+    passport.authenticate('local', {
+      successRedirect: '/dashboard',
+      failureRedirect: '/login',
+      failureFlash: true
+    })(req, res, next);
+  });
 
+//@type GET
+//$route /logout
+//@desc route for post logout
+//@access PUBLIC
+router.get("/logout",(req,res)=>{
+    req.logout();
+    req.session.destroy();
+    req.flash('success_msg', 'You are logged out');
+    res.redirect("/login");
+})
 
 module.exports = router;
