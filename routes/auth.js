@@ -127,7 +127,6 @@ router.post('/login', (req, res, next) => {
 //@access PUBLIC
 router.get("/logout",(req,res)=>{
     req.logout();
-    req.session.destroy();
     req.flash('success_msg', 'You are logged out');
     res.redirect("/login");
 })
